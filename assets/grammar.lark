@@ -1,0 +1,114 @@
+start: instruction+
+
+?instruction: set_var
+            | reassign_var
+
+            | builtin_call
+            
+            | define_proc
+            | call_proc
+            | return_stmt
+
+            | if_stmt
+            | else_stmt
+
+            | increment
+            | decrement
+
+            | step_up
+            | step_down
+
+            | for_loop
+            | while_loop
+
+            | primary
+
+// make x = 7
+// x = 5
+
+set_var: "make" SYMBOL "=" (expression | builtin_call | return_call_proc)
+reassign_var:   SYMBOL "=" (expression | builtin_call | return_call_proc)
+
+builtin_call: SYMBOL "." SYMBOL "(" [arguments] ")"
+
+// proc sum(a, b) {
+//    return a + b
+// }
+
+define_proc: "proc" SYMBOL "(" [parameters] ")" "{" instruction* "}"
+    parameters: SYMBOL ("," SYMBOL)*
+
+return_call_proc: SYMBOL "(" [arguments] ")"
+call_proc:       SYMBOL "(" [arguments] ")"
+    arguments: expression ("," (expression | return_call_proc))*
+
+return_stmt: "return" expression
+
+// if (x == y) {
+//    ...
+// } else {
+//    ...
+// }
+
+if_stmt: "if" "(" condition ")" "{" instruction* "}"
+       | "if"     condition     "{" instruction* "}"
+else_stmt: "else" "{" instruction* "}"
+
+// x++
+// y--
+
+increment: SYMBOL "++"
+decrement: SYMBOL "--"
+
+// x += 7
+// y -= 5
+
+step_up  : SYMBOL "+=" expression
+step_down: SYMBOL "-=" expression
+
+// for (i = 0 to 75) {
+//    ...
+// }
+
+// while (i < 75) {
+//    ...
+// }
+
+for_loop: "for" "(" SYMBOL "=" expression loop_operator expression ")" "{" instruction* "}"
+        | "for"     SYMBOL "=" expression loop_operator expression     "{" instruction* "}"
+    loop_operator: "to" | "with"
+
+while_loop: "while" "(" condition ")" "{" instruction* "}"
+          | "while"     condition     "{" instruction* "}"
+
+condition: (expression comp expression | expression)
+    !comp: "<" | ">" | "==" | "!=" | "<=" | ">="
+
+
+?expression: expression "+" term -> add
+           | expression "-" term -> sub
+           | term
+
+?term: term "*" factor -> mul
+     | term "/" factor -> div
+     | term "%" factor -> mod
+     | factor
+
+?factor: primary
+
+primary: INT
+        | FLOAT
+        | STRING
+        | SYMBOL
+        | "(" expression ")" -> parentheses
+
+SYMBOL: /[a-zA-Z_][a-zA-Z0-9_]*/i
+COMMENT: "//" /[^\n]*/x
+
+%import common.ESCAPED_STRING -> STRING
+%import common.INT            -> INT
+%import common.FLOAT          -> FLOAT
+%import common.WS
+
+%ignore COMMENT
+%ignore WS
